@@ -371,76 +371,78 @@ async fn run_internal(opts: Options) -> Result<CodexResult> {
                     }
                 };
 
-        // Collect all messages if requested (with bounds checking)
-        if opts.return_all_messages {
-            if result.all_messages.len() < message_limit {
-                if let Ok(map) = serde_json::from_value::<HashMap<String, Value>>(line_data.clone())
-                {
-                    // Estimate size of this message (JSON serialized size)
-                    let message_size = serde_json::to_string(&map)
-                        .map(|s| s.len())
-                        .unwrap_or(0);
+                // Collect all messages if requested (with bounds checking)
+                if opts.return_all_messages {
+                    if result.all_messages.len() < message_limit {
+                        if let Ok(map) =
+                            serde_json::from_value::<HashMap<String, Value>>(line_data.clone())
+                        {
+                            // Estimate size of this message (JSON serialized size)
+                            let message_size =
+                                serde_json::to_string(&map).map(|s| s.len()).unwrap_or(0);
 
-                    // Check if adding this message would exceed byte limit
-                    if all_messages_size + message_size <= MAX_ALL_MESSAGES_SIZE {
-                        all_messages_size += message_size;
-                        result.all_messages.push(map);
+                            // Check if adding this message would exceed byte limit
+                            if all_messages_size + message_size <= MAX_ALL_MESSAGES_SIZE {
+                                all_messages_size += message_size;
+                                result.all_messages.push(map);
+                            } else if !result.all_messages_truncated {
+                                result.all_messages_truncated = true;
+                            }
+                        }
                     } else if !result.all_messages_truncated {
                         result.all_messages_truncated = true;
                     }
                 }
-            } else if !result.all_messages_truncated {
-                result.all_messages_truncated = true;
-            }
-        }
 
-        // Extract thread_id
-        if let Some(thread_id) = line_data.get("thread_id").and_then(|v| v.as_str()) {
-            if !thread_id.is_empty() {
-                result.session_id = thread_id.to_string();
-            }
-        }
+                // Extract thread_id
+                if let Some(thread_id) = line_data.get("thread_id").and_then(|v| v.as_str()) {
+                    if !thread_id.is_empty() {
+                        result.session_id = thread_id.to_string();
+                    }
+                }
 
-        // Extract agent messages with size limits
-        if let Some(item) = line_data.get("item").and_then(|v| v.as_object()) {
-            if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
-                if item_type == "agent_message" {
-                    if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
-                        // Check if adding this text would exceed the limit
-                        let new_size = result.agent_messages.len() + text.len();
-                        if new_size > MAX_AGENT_MESSAGES_SIZE {
-                            if !result.agent_messages_truncated {
-                                result.agent_messages.push_str(
+                // Extract agent messages with size limits
+                if let Some(item) = line_data.get("item").and_then(|v| v.as_object()) {
+                    if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
+                        if item_type == "agent_message" {
+                            if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
+                                // Check if adding this text would exceed the limit
+                                let new_size = result.agent_messages.len() + text.len();
+                                if new_size > MAX_AGENT_MESSAGES_SIZE {
+                                    if !result.agent_messages_truncated {
+                                        result.agent_messages.push_str(
                                     "\n[... Agent messages truncated due to size limit ...]",
                                 );
-                                result.agent_messages_truncated = true;
+                                        result.agent_messages_truncated = true;
+                                    }
+                                } else if !result.agent_messages_truncated {
+                                    // Add a newline separator between multiple agent messages for better parsing
+                                    if !result.agent_messages.is_empty() && !text.is_empty() {
+                                        result.agent_messages.push('\n');
+                                    }
+                                    result.agent_messages.push_str(text);
+                                }
                             }
-                        } else if !result.agent_messages_truncated {
-                            // Add a newline separator between multiple agent messages for better parsing
-                            if !result.agent_messages.is_empty() && !text.is_empty() {
-                                result.agent_messages.push('\n');
-                            }
-                            result.agent_messages.push_str(text);
                         }
                     }
                 }
-            }
-        }
 
-        // Check for errors
-        if let Some(line_type) = line_data.get("type").and_then(|v| v.as_str()) {
-            if line_type.contains("fail") || line_type.contains("error") {
-                // Always mark as failure when we encounter error/fail events
-                result.success = false;
-                if let Some(error_obj) = line_data.get("error").and_then(|v| v.as_object()) {
-                    if let Some(msg) = error_obj.get("message").and_then(|v| v.as_str()) {
-                        result.error = Some(format!("codex error: {}", msg));
+                // Check for errors
+                if let Some(line_type) = line_data.get("type").and_then(|v| v.as_str()) {
+                    if line_type.contains("fail") || line_type.contains("error") {
+                        // Always mark as failure when we encounter error/fail events
+                        result.success = false;
+                        if let Some(error_obj) = line_data.get("error").and_then(|v| v.as_object())
+                        {
+                            if let Some(msg) = error_obj.get("message").and_then(|v| v.as_str()) {
+                                result.error = Some(format!("codex error: {}", msg));
+                            }
+                        } else if let Some(msg) = line_data.get("message").and_then(|v| v.as_str())
+                        {
+                            result.error = Some(format!("codex error: {}", msg));
+                        }
                     }
-                } else if let Some(msg) = line_data.get("message").and_then(|v| v.as_str()) {
-                    result.error = Some(format!("codex error: {}", msg));
                 }
-            }
-        }
             }
             Err(e) => {
                 // Create a simple IO error for the parse error
@@ -713,7 +715,10 @@ mod tests {
             agent_messages_truncated: false,
             all_messages: Vec::new(),
             all_messages_truncated: false,
-            error: Some("Output line exceeded 1048576 byte limit and was truncated, cannot parse JSON.".to_string()),
+            error: Some(
+                "Output line exceeded 1048576 byte limit and was truncated, cannot parse JSON."
+                    .to_string(),
+            ),
             warnings: None,
         };
 
@@ -723,7 +728,10 @@ mod tests {
         assert!(!updated.success);
         let error = updated.error.unwrap();
         assert!(error.contains("truncated"));
-        assert!(!error.contains("SESSION_ID"), "Should not add session_id error when truncation error exists");
+        assert!(
+            !error.contains("SESSION_ID"),
+            "Should not add session_id error when truncation error exists"
+        );
         // Agent_messages warning should still be added since it's a separate concern
         assert!(updated.warnings.is_some());
         assert!(updated.warnings.unwrap().contains("No agent_messages"));

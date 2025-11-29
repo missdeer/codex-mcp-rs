@@ -197,7 +197,9 @@ async fn test_timeout_error_shape() {
 
         let script_path = temp_path.join("sleep_script.sh");
         fs::write(&script_path, "#!/bin/sh\nsleep 10\n").expect("Failed to write script");
-        let mut perms = fs::metadata(&script_path).expect("Failed to get metadata").permissions();
+        let mut perms = fs::metadata(&script_path)
+            .expect("Failed to get metadata")
+            .permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&script_path, perms).expect("Failed to set permissions");
 
@@ -208,7 +210,8 @@ async fn test_timeout_error_shape() {
     {
         use std::fs;
         let script_path = temp_path.join("sleep_script.bat");
-        fs::write(&script_path, "@echo off\ntimeout /t 10 /nobreak\n").expect("Failed to write script");
+        fs::write(&script_path, "@echo off\ntimeout /t 10 /nobreak\n")
+            .expect("Failed to write script");
         env::set_var("CODEX_BIN", script_path.to_str().unwrap());
     }
 
@@ -230,7 +233,10 @@ async fn test_timeout_error_shape() {
     let result = codex::run(opts).await.expect("run should return Ok");
 
     // Verify timeout behavior
-    assert!(!result.success, "timeout should mark result as unsuccessful");
+    assert!(
+        !result.success,
+        "timeout should mark result as unsuccessful"
+    );
     assert!(
         result.error.is_some(),
         "timeout should have an error message"
@@ -244,8 +250,14 @@ async fn test_timeout_error_shape() {
     );
 
     // With ValidationMode::Skip, timeout should NOT add session_id or agent_messages warnings
-    assert!(result.session_id.is_empty(), "timeout result should have empty session_id");
-    assert!(result.warnings.is_none(), "timeout should not generate validation warnings");
+    assert!(
+        result.session_id.is_empty(),
+        "timeout result should have empty session_id"
+    );
+    assert!(
+        result.warnings.is_none(),
+        "timeout should not generate validation warnings"
+    );
 
     // Clean up env var
     env::remove_var("CODEX_BIN");
