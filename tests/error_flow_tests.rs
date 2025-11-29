@@ -132,7 +132,7 @@ fn test_escape_prompt_with_special_chars() {
 #[test]
 fn test_stderr_error_context() {
     // Test error messages that include stderr context
-    let error_with_stderr = format!("Command failed\nStderr: Warning: Something went wrong");
+    let error_with_stderr = "Command failed\nStderr: Warning: Something went wrong".to_string();
 
     assert!(error_with_stderr.contains("Stderr:"));
     assert!(error_with_stderr.contains("Warning: Something went wrong"));
