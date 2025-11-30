@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           # Linux x86_64
-          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             artifact_name: codex-mcp-rs
             asset_name: codex-mcp-rs_Linux_x86_64.tar.gz
@@ -54,6 +54,7 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
+          strip ${{ matrix.artifact_name }}
           tar czf ../../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
 
       - name: Package (Windows)
