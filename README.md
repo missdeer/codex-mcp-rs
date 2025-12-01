@@ -64,7 +64,21 @@ Then add to your Claude Code MCP configuration:
 claude mcp add codex-rs -s user --transport stdio -- codex-mcp-rs
 ```
 
-### Option 2: Install from Release
+### Option 2: Install via Install Script (Linux/macOS)
+
+Automatically download and install the latest release binary to `/opt/codex-mcp-rs/`:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/missdeer/codex-mcp-rs/master/scripts/install.sh | bash
+```
+
+This script will:
+- Detect your platform and architecture
+- Download the latest release from GitHub
+- Install the binary to `/opt/codex-mcp-rs/codex-mcp-rs`
+- Automatically add it to your Claude Code MCP configuration
+
+### Option 3: Install from Release
 
 Download the appropriate binary for your platform from the [releases page](https://github.com/missdeer/codex-mcp-rs/releases), extract it, and add to your MCP configuration:
 
@@ -72,7 +86,7 @@ Download the appropriate binary for your platform from the [releases page](https
 claude mcp add codex-rs -s user --transport stdio -- /path/to/codex-mcp-rs
 ```
 
-### Option 3: Build from Source
+### Option 4: Build from Source
 
 ```bash
 git clone https://github.com/missdeer/codex-mcp-rs.git
