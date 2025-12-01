@@ -166,7 +166,7 @@ async fn read_agents_md(working_dir: &std::path::Path) -> (Option<String>, Optio
 
     // Read only up to MAX_AGENTS_SIZE + a small buffer (safe to cast now since we checked against ABSOLUTE_MAX_SIZE)
     let bytes_to_read = (file_size as usize).min(MAX_AGENTS_SIZE + 4); // +4 for potential multibyte char
-    let mut file = match tokio::fs::File::open(&agents_path).await {
+    let file = match tokio::fs::File::open(&agents_path).await {
         Ok(f) => f,
         Err(e) => {
             let warning = format!("Failed to open AGENTS.md: {}", e);
