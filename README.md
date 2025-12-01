@@ -20,7 +20,7 @@ A high-performance Rust implementation of MCP (Model Context Protocol) server th
 
 ## Prerequisites
 
-- Rust 1.70+ (uses 2021 edition)
+- Rust 1.90+ (uses 2025 edition)
 - [Codex CLI](https://github.com/anthropics/codex) installed and configured
 - Claude Code or another MCP client
 
