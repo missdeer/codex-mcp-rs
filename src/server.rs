@@ -199,6 +199,24 @@ struct CodexOutput {
     warnings: Option<String>,
 }
 
+fn build_codex_output(
+    result: &codex::CodexResult,
+    return_all_messages: bool,
+    warnings: Option<String>,
+) -> CodexOutput {
+    CodexOutput {
+        success: result.success,
+        session_id: result.session_id.clone(),
+        agent_messages: result.agent_messages.clone(),
+        agent_messages_truncated: result.agent_messages_truncated.then_some(true),
+        all_messages: return_all_messages.then_some(result.all_messages.clone()),
+        all_messages_truncated: (return_all_messages && result.all_messages_truncated)
+            .then_some(true),
+        error: result.error.clone(),
+        warnings,
+    }
+}
+
 #[derive(Clone)]
 pub struct CodexServer {
     tool_router: ToolRouter<CodexServer>,
@@ -397,70 +415,14 @@ impl CodexServer {
         let combined_warnings = merge_warnings(security_warnings.clone(), result.warnings.clone());
 
         // Prepare the response
-        if result.success {
-            let output = CodexOutput {
-                success: true,
-                session_id: result.session_id,
-                agent_messages: result.agent_messages.clone(),
-                agent_messages_truncated: if result.agent_messages_truncated {
-                    Some(true)
-                } else {
-                    None
-                },
-                all_messages: if args.return_all_messages {
-                    Some(result.all_messages)
-                } else {
-                    None
-                },
-                all_messages_truncated: if args.return_all_messages && result.all_messages_truncated
-                {
-                    Some(true)
-                } else {
-                    None
-                },
-                error: result.error.clone(),
-                warnings: combined_warnings.clone(),
-            };
+        let output = build_codex_output(&result, args.return_all_messages, combined_warnings);
 
-            let json_output = serde_json::to_string(&output).map_err(|e| {
-                McpError::internal_error(format!("Failed to serialize output: {}", e), None)
-            })?;
+        let json_output = serde_json::to_string(&output).map_err(|e| {
+            McpError::internal_error(format!("Failed to serialize output: {}", e), None)
+        })?;
 
-            Ok(CallToolResult::success(vec![Content::text(json_output)]))
-        } else {
-            // On failure, return structured error with warnings separated
-            let output = CodexOutput {
-                success: false,
-                session_id: result.session_id,
-                agent_messages: result.agent_messages.clone(),
-                agent_messages_truncated: if result.agent_messages_truncated {
-                    Some(true)
-                } else {
-                    None
-                },
-                all_messages: if args.return_all_messages {
-                    Some(result.all_messages)
-                } else {
-                    None
-                },
-                all_messages_truncated: if args.return_all_messages && result.all_messages_truncated
-                {
-                    Some(true)
-                } else {
-                    None
-                },
-                error: result.error.clone(),
-                warnings: combined_warnings.clone(),
-            };
-
-            let json_output = serde_json::to_string(&output).map_err(|e| {
-                McpError::internal_error(format!("Failed to serialize output: {}", e), None)
-            })?;
-
-            // Return the structured error as content instead of throwing an error
-            // This allows clients to access both error and warnings fields
-            Ok(CallToolResult::success(vec![Content::text(json_output)]))
-        }
+        // Always return structured content so callers can inspect success, error, and warning fields.
+        Ok(CallToolResult::success(vec![Content::text(json_output)]))
     }
 }
 
