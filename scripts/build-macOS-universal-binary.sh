@@ -1,4 +1,15 @@
 #!/bin/sh
-cargo build --release --target aarch64-apple-darwin
-cargo build --release --target x86_64-apple-darwin
-lipo -create -output codex-mcp-rs target/aarch64-apple-darwin/release/codex-mcp-rs target/x86_64-apple-darwin/release/codex-mcp-rs
+# Check current CPU type
+CPU_TYPE=$(uname -m)
+
+if [ "$CPU_TYPE" = "arm64" ]; then
+    # Apple Silicon: build for x86_64
+    TARGET="x86_64-apple-darwin"
+else
+    # Intel: build for aarch64
+    TARGET="aarch64-apple-darwin"
+fi
+
+env RUSTFLAGS="-C target-cpu=native" cargo build --release 
+cargo build --release --target $TARGET
+lipo -create -output codex-mcp-rs target/$TARGET/release/codex-mcp-rs target/release/codex-mcp-rs
