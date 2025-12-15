@@ -119,7 +119,9 @@ struct DefaultTimeoutResult {
 
 /// Pure function to resolve timeout from an environment variable result.
 /// Suitable for testing without touching global state.
-fn resolve_timeout_from_env(env_result: Result<String, std::env::VarError>) -> DefaultTimeoutResult {
+fn resolve_timeout_from_env(
+    env_result: Result<String, std::env::VarError>,
+) -> DefaultTimeoutResult {
     match env_result {
         Ok(val) => {
             let trimmed = val.trim();
@@ -192,7 +194,11 @@ pub struct SecurityConfig {
 
 /// Pure function to resolve a boolean from an environment variable value.
 /// Suitable for testing without touching global state.
-fn resolve_env_bool(key: &str, env_val: Option<String>, warnings: &mut Vec<String>) -> Option<bool> {
+fn resolve_env_bool(
+    key: &str,
+    env_val: Option<String>,
+    warnings: &mut Vec<String>,
+) -> Option<bool> {
     env_val.and_then(|v| {
         let normalized = v.trim().to_ascii_lowercase();
         match normalized.as_str() {
@@ -527,26 +533,50 @@ mod tests {
     #[test]
     fn resolve_env_bool_accepts_truthy_values() {
         let mut warnings = Vec::new();
-        assert_eq!(resolve_env_bool("K", Some("1".into()), &mut warnings), Some(true));
-        assert_eq!(resolve_env_bool("K", Some("true".into()), &mut warnings), Some(true));
-        assert_eq!(resolve_env_bool("K", Some("yes".into()), &mut warnings), Some(true));
-        assert_eq!(resolve_env_bool("K", Some("on".into()), &mut warnings), Some(true));
+        assert_eq!(
+            resolve_env_bool("K", Some("1".into()), &mut warnings),
+            Some(true)
+        );
+        assert_eq!(
+            resolve_env_bool("K", Some("true".into()), &mut warnings),
+            Some(true)
+        );
+        assert_eq!(
+            resolve_env_bool("K", Some("yes".into()), &mut warnings),
+            Some(true)
+        );
+        assert_eq!(
+            resolve_env_bool("K", Some("on".into()), &mut warnings),
+            Some(true)
+        );
         assert!(warnings.is_empty());
     }
 
     #[test]
     fn resolve_env_bool_accepts_falsy_values() {
         let mut warnings = Vec::new();
-        assert_eq!(resolve_env_bool("K", Some("0".into()), &mut warnings), Some(false));
-        assert_eq!(resolve_env_bool("K", Some("false".into()), &mut warnings), Some(false));
-        assert_eq!(resolve_env_bool("K", Some("off".into()), &mut warnings), Some(false));
+        assert_eq!(
+            resolve_env_bool("K", Some("0".into()), &mut warnings),
+            Some(false)
+        );
+        assert_eq!(
+            resolve_env_bool("K", Some("false".into()), &mut warnings),
+            Some(false)
+        );
+        assert_eq!(
+            resolve_env_bool("K", Some("off".into()), &mut warnings),
+            Some(false)
+        );
         assert!(warnings.is_empty());
     }
 
     #[test]
     fn resolve_env_bool_warns_on_invalid() {
         let mut warnings = Vec::new();
-        assert_eq!(resolve_env_bool("TEST_KEY", Some("maybe".into()), &mut warnings), None);
+        assert_eq!(
+            resolve_env_bool("TEST_KEY", Some("maybe".into()), &mut warnings),
+            None
+        );
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("TEST_KEY"));
         assert!(warnings[0].contains("maybe"));
