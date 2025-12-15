@@ -117,12 +117,10 @@ struct DefaultTimeoutResult {
     warning: Option<String>,
 }
 
-/// Get the default timeout, checking environment variable first.
-/// Returns DEFAULT_TIMEOUT_SECS if env var is not set or invalid.
-/// Clamps values to MAX_TIMEOUT_SECS if too large.
-/// Returns any warning message for structured reporting.
-fn get_default_timeout_with_warning() -> DefaultTimeoutResult {
-    match std::env::var("CODEX_DEFAULT_TIMEOUT") {
+/// Pure function to resolve timeout from an environment variable result.
+/// Suitable for testing without touching global state.
+fn resolve_timeout_from_env(env_result: Result<String, std::env::VarError>) -> DefaultTimeoutResult {
+    match env_result {
         Ok(val) => {
             let trimmed = val.trim();
             // Treat empty string as "not set"
@@ -174,6 +172,14 @@ fn get_default_timeout_with_warning() -> DefaultTimeoutResult {
     }
 }
 
+/// Get the default timeout, checking environment variable first.
+/// Returns DEFAULT_TIMEOUT_SECS if env var is not set or invalid.
+/// Clamps values to MAX_TIMEOUT_SECS if too large.
+/// Returns any warning message for structured reporting.
+fn get_default_timeout_with_warning() -> DefaultTimeoutResult {
+    resolve_timeout_from_env(std::env::var("CODEX_DEFAULT_TIMEOUT"))
+}
+
 /// Security configuration for server-side restrictions
 pub struct SecurityConfig {
     /// Allow dangerous sandbox modes
@@ -184,8 +190,10 @@ pub struct SecurityConfig {
     pub allow_skip_git_check: bool,
 }
 
-fn parse_env_bool(key: &str, warnings: &mut Vec<String>) -> Option<bool> {
-    std::env::var(key).ok().and_then(|v| {
+/// Pure function to resolve a boolean from an environment variable value.
+/// Suitable for testing without touching global state.
+fn resolve_env_bool(key: &str, env_val: Option<String>, warnings: &mut Vec<String>) -> Option<bool> {
+    env_val.and_then(|v| {
         let normalized = v.trim().to_ascii_lowercase();
         match normalized.as_str() {
             "1" | "true" | "yes" | "y" | "on" | "t" | "enable" | "enabled" => Some(true),
@@ -200,6 +208,10 @@ fn parse_env_bool(key: &str, warnings: &mut Vec<String>) -> Option<bool> {
             }
         }
     })
+}
+
+fn parse_env_bool(key: &str, warnings: &mut Vec<String>) -> Option<bool> {
+    resolve_env_bool(key, std::env::var(key).ok(), warnings)
 }
 
 /// Get security configuration from environment variables
@@ -510,44 +522,42 @@ impl ServerHandler for CodexServer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env::VarError;
 
-    fn restore_env(key: &str, original: Option<String>) {
-        if let Some(val) = original {
-            std::env::set_var(key, val);
-        } else {
-            std::env::remove_var(key);
-        }
+    #[test]
+    fn resolve_env_bool_accepts_truthy_values() {
+        let mut warnings = Vec::new();
+        assert_eq!(resolve_env_bool("K", Some("1".into()), &mut warnings), Some(true));
+        assert_eq!(resolve_env_bool("K", Some("true".into()), &mut warnings), Some(true));
+        assert_eq!(resolve_env_bool("K", Some("yes".into()), &mut warnings), Some(true));
+        assert_eq!(resolve_env_bool("K", Some("on".into()), &mut warnings), Some(true));
+        assert!(warnings.is_empty());
     }
 
     #[test]
-    fn parse_env_bool_accepts_numeric_and_text_values() {
-        let key = "CODEX_TEST_BOOL_ACCEPT";
-        let original = std::env::var(key).ok();
-
-        std::env::set_var(key, "1");
+    fn resolve_env_bool_accepts_falsy_values() {
         let mut warnings = Vec::new();
-        assert_eq!(parse_env_bool(key, &mut warnings), Some(true));
+        assert_eq!(resolve_env_bool("K", Some("0".into()), &mut warnings), Some(false));
+        assert_eq!(resolve_env_bool("K", Some("false".into()), &mut warnings), Some(false));
+        assert_eq!(resolve_env_bool("K", Some("off".into()), &mut warnings), Some(false));
         assert!(warnings.is_empty());
-
-        std::env::set_var(key, "off");
-        warnings.clear();
-        assert_eq!(parse_env_bool(key, &mut warnings), Some(false));
-        assert!(warnings.is_empty());
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn parse_env_bool_warns_on_invalid_values() {
-        let key = "CODEX_TEST_BOOL_INVALID";
-        let original = std::env::var(key).ok();
-
-        std::env::set_var(key, "maybe");
+    fn resolve_env_bool_warns_on_invalid() {
         let mut warnings = Vec::new();
-        assert_eq!(parse_env_bool(key, &mut warnings), None);
+        assert_eq!(resolve_env_bool("TEST_KEY", Some("maybe".into()), &mut warnings), None);
         assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("TEST_KEY"));
+        assert!(warnings[0].contains("maybe"));
+    }
 
-        restore_env(key, original);
+    #[test]
+    fn resolve_env_bool_returns_none_for_empty() {
+        let mut warnings = Vec::new();
+        assert_eq!(resolve_env_bool("K", Some("".into()), &mut warnings), None);
+        assert_eq!(resolve_env_bool("K", None, &mut warnings), None);
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -596,109 +606,61 @@ mod tests {
     }
 
     #[test]
-    fn get_default_timeout_returns_default_when_env_not_set() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::remove_var(key);
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_returns_default_when_env_not_set() {
+        let result = resolve_timeout_from_env(Err(VarError::NotPresent));
         assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
         assert!(result.warning.is_none());
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_parses_valid_value() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "1800");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_parses_valid_value() {
+        let result = resolve_timeout_from_env(Ok("1800".into()));
         assert_eq!(result.value, 1800);
         assert!(result.warning.is_none());
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_trims_whitespace() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "  900  ");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_trims_whitespace() {
+        let result = resolve_timeout_from_env(Ok("  900  ".into()));
         assert_eq!(result.value, 900);
         assert!(result.warning.is_none());
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_treats_empty_as_unset() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_treats_empty_as_unset() {
+        let result = resolve_timeout_from_env(Ok("".into()));
         assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
         assert!(result.warning.is_none());
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_treats_whitespace_only_as_unset() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "   ");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_treats_whitespace_only_as_unset() {
+        let result = resolve_timeout_from_env(Ok("   ".into()));
         assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
         assert!(result.warning.is_none());
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_caps_values_exceeding_max() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "9999");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_caps_values_exceeding_max() {
+        let result = resolve_timeout_from_env(Ok("9999".into()));
         assert_eq!(result.value, MAX_TIMEOUT_SECS);
         assert!(result.warning.is_some());
         assert!(result.warning.unwrap().contains("exceeds maximum"));
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_rejects_zero() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "0");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_rejects_zero() {
+        let result = resolve_timeout_from_env(Ok("0".into()));
         assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
         assert!(result.warning.is_some());
         assert!(result.warning.unwrap().contains("invalid"));
-
-        restore_env(key, original);
     }
 
     #[test]
-    fn get_default_timeout_rejects_invalid_string() {
-        let key = "CODEX_DEFAULT_TIMEOUT";
-        let original = std::env::var(key).ok();
-        std::env::set_var(key, "not-a-number");
-
-        let result = super::get_default_timeout_with_warning();
+    fn resolve_timeout_rejects_invalid_string() {
+        let result = resolve_timeout_from_env(Ok("not-a-number".into()));
         assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
         assert!(result.warning.is_some());
         assert!(result.warning.unwrap().contains("not a valid number"));
-
-        restore_env(key, original);
     }
 }
