@@ -8,6 +8,12 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
+/// Default timeout in seconds (10 minutes)
+pub const DEFAULT_TIMEOUT_SECS: u64 = 600;
+
+/// Maximum allowed timeout in seconds (1 hour)
+pub const MAX_TIMEOUT_SECS: u64 = 3600;
+
 /// Sandbox policy for model-generated commands
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, schemars::JsonSchema, Default)]
 #[serde(rename_all = "kebab-case")]
@@ -131,54 +137,54 @@ async fn read_line_with_limit<R: AsyncBufReadExt + Unpin>(
 }
 
 /// Execute Codex CLI with the given options and return the result
-/// Requires timeout to be set to prevent unbounded execution
+/// Requires timeout to be set to prevent unbounded execution.
+/// If timeout_secs is None or 0, uses DEFAULT_TIMEOUT_SECS.
+/// If timeout_secs exceeds MAX_TIMEOUT_SECS, caps to MAX_TIMEOUT_SECS.
 pub async fn run(opts: Options) -> Result<CodexResult> {
-    // Ensure timeout is always set
-    let opts = if opts.timeout_secs.is_none() {
-        Options {
-            prompt: opts.prompt,
-            working_dir: opts.working_dir,
-            sandbox: opts.sandbox,
-            session_id: opts.session_id,
-            skip_git_repo_check: opts.skip_git_repo_check,
-            return_all_messages: opts.return_all_messages,
-            return_all_messages_limit: opts.return_all_messages_limit,
-            image_paths: opts.image_paths,
-            model: opts.model,
-            yolo: opts.yolo,
-            profile: opts.profile,
-            timeout_secs: Some(600), // Default 10 minutes
-        }
-    } else {
-        opts
+    // Ensure timeout is always set and within bounds
+    let timeout_secs = match opts.timeout_secs {
+        None | Some(0) => DEFAULT_TIMEOUT_SECS,
+        Some(t) if t > MAX_TIMEOUT_SECS => MAX_TIMEOUT_SECS,
+        Some(t) => t,
     };
 
-    // Apply timeout if specified
-    if let Some(timeout_secs) = opts.timeout_secs {
-        let duration = std::time::Duration::from_secs(timeout_secs);
-        match tokio::time::timeout(duration, run_internal(opts)).await {
-            Ok(result) => result,
-            Err(_) => {
-                // Timeout occurred - the child process will be killed automatically via kill_on_drop
-                let result = CodexResult {
-                    success: false,
-                    session_id: String::new(),
-                    agent_messages: String::new(),
-                    agent_messages_truncated: false,
-                    all_messages: Vec::new(),
-                    all_messages_truncated: false,
-                    error: Some(format!(
-                        "Codex execution timed out after {} seconds",
-                        timeout_secs
-                    )),
-                    warnings: None,
-                };
-                // Skip validation since timeout error is already well-defined
-                Ok(enforce_required_fields(result, ValidationMode::Skip))
-            }
+    let opts = Options {
+        prompt: opts.prompt,
+        working_dir: opts.working_dir,
+        sandbox: opts.sandbox,
+        session_id: opts.session_id,
+        skip_git_repo_check: opts.skip_git_repo_check,
+        return_all_messages: opts.return_all_messages,
+        return_all_messages_limit: opts.return_all_messages_limit,
+        image_paths: opts.image_paths,
+        model: opts.model,
+        yolo: opts.yolo,
+        profile: opts.profile,
+        timeout_secs: Some(timeout_secs),
+    };
+
+    // Apply timeout
+    let duration = std::time::Duration::from_secs(timeout_secs);
+    match tokio::time::timeout(duration, run_internal(opts)).await {
+        Ok(result) => result,
+        Err(_) => {
+            // Timeout occurred - the child process will be killed automatically via kill_on_drop
+            let result = CodexResult {
+                success: false,
+                session_id: String::new(),
+                agent_messages: String::new(),
+                agent_messages_truncated: false,
+                all_messages: Vec::new(),
+                all_messages_truncated: false,
+                error: Some(format!(
+                    "Codex execution timed out after {} seconds",
+                    timeout_secs
+                )),
+                warnings: None,
+            };
+            // Skip validation since timeout error is already well-defined
+            Ok(enforce_required_fields(result, ValidationMode::Skip))
         }
-    } else {
-        run_internal(opts).await
     }
 }
 

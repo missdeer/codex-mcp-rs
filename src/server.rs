@@ -1,4 +1,4 @@
-use crate::codex::{self, Options, SandboxPolicy};
+use crate::codex::{self, Options, SandboxPolicy, DEFAULT_TIMEOUT_SECS, MAX_TIMEOUT_SECS};
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::*,
@@ -105,17 +105,74 @@ pub struct CodexArgs {
     /// Configuration profile name to load from '~/.codex/config.toml'
     #[serde(default)]
     pub profile: Option<String>,
-    /// Timeout in seconds for codex execution. Default: 600 (10 minutes)
-    #[serde(default = "default_timeout")]
+    /// Timeout in seconds for codex execution. If not specified, uses CODEX_DEFAULT_TIMEOUT
+    /// environment variable or falls back to 600 seconds (10 minutes). Max: 3600 seconds.
+    #[serde(default)]
     pub timeout_secs: Option<u64>,
 }
 
-fn default_timeout() -> Option<u64> {
-    Some(600) // 10 minutes default
+/// Result of parsing the default timeout from environment
+struct DefaultTimeoutResult {
+    value: u64,
+    warning: Option<String>,
 }
 
-/// Maximum allowed timeout in seconds (1 hour)
-const MAX_TIMEOUT_SECS: u64 = 3600;
+/// Get the default timeout, checking environment variable first.
+/// Returns DEFAULT_TIMEOUT_SECS if env var is not set or invalid.
+/// Clamps values to MAX_TIMEOUT_SECS if too large.
+/// Returns any warning message for structured reporting.
+fn get_default_timeout_with_warning() -> DefaultTimeoutResult {
+    match std::env::var("CODEX_DEFAULT_TIMEOUT") {
+        Ok(val) => {
+            let trimmed = val.trim();
+            // Treat empty string as "not set"
+            if trimmed.is_empty() {
+                return DefaultTimeoutResult {
+                    value: DEFAULT_TIMEOUT_SECS,
+                    warning: None,
+                };
+            }
+            match trimmed.parse::<u64>() {
+                Ok(0) => DefaultTimeoutResult {
+                    value: DEFAULT_TIMEOUT_SECS,
+                    warning: Some(format!(
+                        "CODEX_DEFAULT_TIMEOUT=0 is invalid; using default of {} seconds",
+                        DEFAULT_TIMEOUT_SECS
+                    )),
+                },
+                Ok(secs) if secs > MAX_TIMEOUT_SECS => DefaultTimeoutResult {
+                    value: MAX_TIMEOUT_SECS,
+                    warning: Some(format!(
+                        "CODEX_DEFAULT_TIMEOUT={} exceeds maximum of {} seconds; capping to maximum",
+                        secs, MAX_TIMEOUT_SECS
+                    )),
+                },
+                Ok(secs) => DefaultTimeoutResult {
+                    value: secs,
+                    warning: None,
+                },
+                Err(_) => DefaultTimeoutResult {
+                    value: DEFAULT_TIMEOUT_SECS,
+                    warning: Some(format!(
+                        "CODEX_DEFAULT_TIMEOUT='{}' is not a valid number; using default of {} seconds",
+                        trimmed, DEFAULT_TIMEOUT_SECS
+                    )),
+                },
+            }
+        }
+        Err(std::env::VarError::NotUnicode(_)) => DefaultTimeoutResult {
+            value: DEFAULT_TIMEOUT_SECS,
+            warning: Some(format!(
+                "CODEX_DEFAULT_TIMEOUT contains invalid UTF-8; using default of {} seconds",
+                DEFAULT_TIMEOUT_SECS
+            )),
+        },
+        Err(std::env::VarError::NotPresent) => DefaultTimeoutResult {
+            value: DEFAULT_TIMEOUT_SECS,
+            warning: None,
+        },
+    }
+}
 
 /// Security configuration for server-side restrictions
 pub struct SecurityConfig {
@@ -306,17 +363,27 @@ impl CodexServer {
         security_warnings.extend(restriction_warnings);
 
         // Enforce timeout requirements: always set and within limits
+        // Only parse env var when we actually need the default (None or Some(0))
         match args.timeout_secs {
             None => {
                 // Always require a timeout to prevent unbounded execution
-                args.timeout_secs = Some(600); // Use default 10 minutes
+                let default_result = get_default_timeout_with_warning();
+                args.timeout_secs = Some(default_result.value);
+                if let Some(warning) = default_result.warning {
+                    security_warnings.push(warning);
+                }
             }
             Some(0) => {
                 // Zero timeout is invalid, use default
-                security_warnings.push(
-                    "Timeout of 0 seconds is invalid; using default of 600 seconds".to_string(),
-                );
-                args.timeout_secs = Some(600);
+                let default_result = get_default_timeout_with_warning();
+                security_warnings.push(format!(
+                    "Timeout of 0 seconds is invalid; using default of {} seconds",
+                    default_result.value
+                ));
+                if let Some(warning) = default_result.warning {
+                    security_warnings.push(warning);
+                }
+                args.timeout_secs = Some(default_result.value);
             }
             Some(timeout) if timeout > MAX_TIMEOUT_SECS => {
                 security_warnings.push(format!(
@@ -526,5 +593,112 @@ mod tests {
         assert!(message.contains("failure"));
         assert!(message.contains("Warnings: warn-one"));
         assert!(message.contains("warn-two"));
+    }
+
+    #[test]
+    fn get_default_timeout_returns_default_when_env_not_set() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::remove_var(key);
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
+        assert!(result.warning.is_none());
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_parses_valid_value() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "1800");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, 1800);
+        assert!(result.warning.is_none());
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_trims_whitespace() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "  900  ");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, 900);
+        assert!(result.warning.is_none());
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_treats_empty_as_unset() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
+        assert!(result.warning.is_none());
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_treats_whitespace_only_as_unset() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "   ");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
+        assert!(result.warning.is_none());
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_caps_values_exceeding_max() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "9999");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, MAX_TIMEOUT_SECS);
+        assert!(result.warning.is_some());
+        assert!(result.warning.unwrap().contains("exceeds maximum"));
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_rejects_zero() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "0");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
+        assert!(result.warning.is_some());
+        assert!(result.warning.unwrap().contains("invalid"));
+
+        restore_env(key, original);
+    }
+
+    #[test]
+    fn get_default_timeout_rejects_invalid_string() {
+        let key = "CODEX_DEFAULT_TIMEOUT";
+        let original = std::env::var(key).ok();
+        std::env::set_var(key, "not-a-number");
+
+        let result = super::get_default_timeout_with_warning();
+        assert_eq!(result.value, DEFAULT_TIMEOUT_SECS);
+        assert!(result.warning.is_some());
+        assert!(result.warning.unwrap().contains("not a valid number"));
+
+        restore_env(key, original);
     }
 }

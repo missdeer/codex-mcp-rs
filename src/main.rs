@@ -12,6 +12,8 @@ use rmcp::{transport::stdio, ServiceExt};
     long_about = None,
     after_help = "ENVIRONMENT VARIABLES:
   CODEX_BIN                    Override the codex binary path (default: 'codex')
+  CODEX_DEFAULT_TIMEOUT        Default timeout in seconds when not specified per-call
+                               (fallback if unset: 600, max: 3600; values > 3600 are capped)
   CODEX_ALLOW_DANGEROUS        Allow danger-full-access sandbox mode (default: false)
                                Accepts: 1/true/yes/y/on/t/enable/enabled or
                                0/false/no/n/off/f/disable/disabled
@@ -50,7 +52,7 @@ SUPPORTED PARAMETERS:
   model                        Model to use (overrides default)
   yolo                         Run without approval prompts (default: false)
   profile                      Config profile from ~/.codex/config.toml
-  timeout_secs                 Timeout in seconds (default: 600, max: 3600)
+  timeout_secs                 Timeout in seconds (default: CODEX_DEFAULT_TIMEOUT or 600, max: 3600)
 
 AGENTS.MD SUPPORT:
   If an AGENTS.md file exists in the working directory, its content will be
