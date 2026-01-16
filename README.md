@@ -50,17 +50,24 @@ Or after building:
 
 ## Installation
 
-### Option 1: Install via NPM (Recommended)
+### Option 1: Use via npx (Recommended)
 
-The easiest way to install is via npm, which will automatically download the correct binary for your platform:
+The easiest way to use codex-mcp-rs is via npx, which will automatically download and run the correct binary for your platform:
+
+```bash
+npx @missdeer/codex-mcp-rs
+```
+
+Add to your Claude Code MCP configuration:
+
+```bash
+claude mcp add codex-rs -s user --transport stdio -- npx @missdeer/codex-mcp-rs
+```
+
+Or install globally:
 
 ```bash
 npm install -g @missdeer/codex-mcp-rs
-```
-
-Then add to your Claude Code MCP configuration:
-
-```bash
 claude mcp add codex-rs -s user --transport stdio -- codex-mcp-rs
 ```
 

@@ -4,10 +4,7 @@
   "mcpName": "io.github.missdeer/codex-mcp-rs",
   "description": "NPM wrapper for codex-mcp-rs - Rust implementation of Codex MCP server",
   "bin": {
-    "codex-mcp-rs": "bin.js"
-  },
-  "scripts": {
-    "postinstall": "node install.js"
+    "codex-mcp-rs": "run.js"
   },
   "repository": {
     "type": "git",
