@@ -199,7 +199,7 @@ async function getReleaseByTag(version) {
   } catch (error) {
     // If the specific version tag doesn't exist, fall back to latest
     if (error.message.includes("404")) {
-      console.log(
+      console.error(
         `Release v${version} not found, falling back to latest release...`
       );
       return getLatestRelease();
@@ -304,8 +304,9 @@ function downloadToFile(url, destPath, options = {}, redirectCount = 0) {
 
 async function extractTarGz(archivePath, destDir) {
   return new Promise((resolve, reject) => {
+    // Redirect extraction output to stderr to keep stdout clean for MCP JSON-RPC
     const tar = spawn("tar", ["-xzf", archivePath, "-C", destDir], {
-      stdio: "inherit",
+      stdio: ["ignore", "ignore", "inherit"],
     });
     tar.on("close", (code) => {
       if (code === 0) resolve();
@@ -325,6 +326,7 @@ async function extractZip(archivePath, destDir) {
   return new Promise((resolve, reject) => {
     // Escape paths for PowerShell: escape backticks and single quotes
     const escapePath = (p) => p.replace(/`/g, "``").replace(/'/g, "''");
+    // Redirect extraction output to stderr to keep stdout clean for MCP JSON-RPC
     const unzipProcess = spawn(
       "powershell",
       [
@@ -334,7 +336,7 @@ async function extractZip(archivePath, destDir) {
         "-Command",
         `Expand-Archive -LiteralPath '${escapePath(archivePath)}' -DestinationPath '${escapePath(destDir)}' -Force`,
       ],
-      { stdio: "inherit" }
+      { stdio: ["ignore", "ignore", "inherit"] }
     );
     unzipProcess.on("close", (code) => {
       if (code === 0) resolve();
@@ -412,7 +414,7 @@ async function downloadAndExtract(cacheDir) {
   // Try to acquire lock
   if (!acquireLock(lockPath)) {
     // Wait for other process to complete
-    console.log("Another process is downloading, waiting...");
+    console.error("Another process is downloading, waiting...");
     let attempts = 0;
     while (!fs.existsSync(binaryPath) && attempts < 60) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -432,7 +434,7 @@ async function downloadAndExtract(cacheDir) {
 
     // Get release for the specific version (with retry)
     const version = getPackageVersion();
-    console.log(`Downloading ${PACKAGE_NAME} v${version}...`);
+    console.error(`Downloading ${PACKAGE_NAME} v${version}...`);
 
     const release = await withRetry(() => getReleaseByTag(version));
     const asset = release.assets.find((a) => a.name === assetName);
@@ -463,7 +465,7 @@ async function downloadAndExtract(cacheDir) {
     );
 
     // Extract to temporary directory
-    console.log("Extracting...");
+    console.error("Extracting...");
     fs.mkdirSync(tempExtractDir, { recursive: true });
 
     if (assetName.endsWith(".zip")) {
@@ -492,7 +494,7 @@ async function downloadAndExtract(cacheDir) {
     fs.unlinkSync(tempArchive);
     fs.rmSync(tempExtractDir, { recursive: true, force: true });
 
-    console.log(`Installed ${PACKAGE_NAME} to ${binaryPath}`);
+    console.error(`Installed ${PACKAGE_NAME} to ${binaryPath}`);
     return binaryPath;
   } catch (error) {
     console.error(`Failed to download ${PACKAGE_NAME}: ${error.message}`);
@@ -528,6 +530,8 @@ async function run() {
   }
 
   // Run the binary with all arguments
+  // Note: We use spawn instead of kexec because kexec is unmaintained and has
+  // compatibility issues on Windows. spawn with signal forwarding works reliably.
   const args = process.argv.slice(2);
   const child = spawn(binaryPath, args, {
     stdio: "inherit",
