@@ -48,28 +48,51 @@ Or after building:
 ./target/release/codex-mcp-rs
 ```
 
-## Installation
+## Quick Start
 
-### Option 1: Use via npx (Recommended)
-
-The easiest way to use codex-mcp-rs is via npx, which will automatically download and run the correct binary for your platform:
+The fastest way to get started is using npx:
 
 ```bash
 npx @missdeer/codex-mcp-rs
 ```
 
-Add to your Claude Code MCP configuration:
+This command automatically downloads the correct pre-built binary for your platform (Windows/macOS/Linux, x64/arm64) and launches the MCP server. No manual installation required.
+
+To add it to Claude Code:
 
 ```bash
 claude mcp add codex-rs -s user --transport stdio -- npx @missdeer/codex-mcp-rs
 ```
 
-Or install globally:
+## Installation
+
+### Option 1: Use via npx (Recommended)
+
+Using npx is the simplest approach - it handles binary download and updates automatically:
+
+```bash
+npx @missdeer/codex-mcp-rs
+```
+
+**What happens:**
+1. npm checks for the latest version of `@missdeer/codex-mcp-rs`
+2. Downloads the pre-built binary matching your OS and architecture
+3. Launches the MCP server on stdio transport
+
+**Add to Claude Code MCP configuration:**
+
+```bash
+claude mcp add codex-rs -s user --transport stdio -- npx @missdeer/codex-mcp-rs
+```
+
+**Or install globally for faster startup:**
 
 ```bash
 npm install -g @missdeer/codex-mcp-rs
 claude mcp add codex-rs -s user --transport stdio -- codex-mcp-rs
 ```
+
+Global installation caches the binary locally, eliminating the version check on each run.
 
 ### Option 2: Install via Install Script (Linux/macOS)
 

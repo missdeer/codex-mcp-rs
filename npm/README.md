@@ -5,13 +5,42 @@
 
 NPM package for **codex-mcp-rs** - A high-performance Rust implementation of MCP (Model Context Protocol) server that wraps the Codex CLI.
 
+## Quick Start
+
+Run directly with npx - no installation required:
+
+```bash
+npx @missdeer/codex-mcp-rs
+```
+
+This automatically downloads the correct binary for your platform and launches the MCP server.
+
 ## Installation
+
+### Option 1: Use via npx (Recommended)
+
+```bash
+npx @missdeer/codex-mcp-rs
+```
+
+npx handles everything automatically:
+1. Checks for the latest version
+2. Downloads the pre-built binary for your OS/architecture
+3. Launches the MCP server on stdio transport
+
+Add to Claude Code:
+
+```bash
+claude mcp add codex-rs -s user --transport stdio -- npx @missdeer/codex-mcp-rs
+```
+
+### Option 2: Global Installation
 
 ```bash
 npm install -g @missdeer/codex-mcp-rs
 ```
 
-This will automatically download and install the appropriate binary for your platform (Linux, macOS, or Windows).
+This downloads and caches the binary locally for faster startup on subsequent runs.
 
 ## Usage with Claude Code
 
