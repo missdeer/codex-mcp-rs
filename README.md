@@ -1,13 +1,13 @@
 # codex-mcp-rs
 
+[中文文档](README-zh_CN.md)
+
 [![CI](https://github.com/missdeer/codex-mcp-rs/workflows/CI/badge.svg)](https://github.com/missdeer/codex-mcp-rs/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Rust Version](https://img.shields.io/badge/rust-1.77.2%2B-blue.svg)](https://www.rust-lang.org)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 
 A high-performance Rust implementation of MCP (Model Context Protocol) server that wraps the Codex CLI for AI-assisted coding tasks.
-
-> **Note**: This is a Rust port of the original Python implementation [codexmcp](../codexmcp). It offers the same functionality with improved performance and lower resource usage.
 
 ## Features
 
@@ -200,7 +200,6 @@ See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation.
 
 ## Related Projects
 
-- [codexmcp](https://github.com/GuDaStudio/codexmcp) - Original Python implementation by guda.studio
 - [codex-mcp-go](https://github.com/w31r4/codex-mcp-go) - Go implementation
 - [geminimcp](https://github.com/GuDaStudio/geminimcp) - Python MCP server for Gemini CLI
 
@@ -210,6 +209,22 @@ Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelin
 
 ## License
 
-MIT License - Copyright (c) 2025 missdeer
+This project is dual-licensed:
 
-See [LICENSE](./LICENSE) for details.
+### Non-Commercial / Personal Use - GNU General Public License v3.0
+
+Free for personal projects, educational purposes, open source projects, and non-commercial use. See [LICENSE](LICENSE) for the full GPLv3 license text.
+
+### Commercial / Workplace Use - Commercial License Required
+
+**If you use codex-mcp-rs in a commercial environment, workplace, or for any commercial purpose, you must obtain a commercial license.**
+
+This includes but is not limited to:
+- Using the software at work (any organization)
+- Integrating into commercial products or services
+- Using for client work or consulting
+- Offering as part of a SaaS/cloud service
+
+**Contact**: missdeer@gmail.com for commercial licensing inquiries.
+
+See [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL) for more details.

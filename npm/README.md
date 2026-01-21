@@ -1,6 +1,6 @@
 # @missdeer/codex-mcp-rs
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 
 NPM package for **codex-mcp-rs** - A high-performance Rust implementation of MCP (Model Context Protocol) server that wraps the Codex CLI.
@@ -103,7 +103,25 @@ For detailed documentation, see the [GitHub repository](https://github.com/missd
 
 ## License
 
-MIT License - Copyright (c) 2025 missdeer
+This project is dual-licensed:
+
+### Non-Commercial / Personal Use - GNU General Public License v3.0
+
+Free for personal projects, educational purposes, open source projects, and non-commercial use. See [LICENSE](https://github.com/missdeer/codex-mcp-rs/blob/master/LICENSE) for the full GPLv3 license text.
+
+### Commercial / Workplace Use - Commercial License Required
+
+**If you use codex-mcp-rs in a commercial environment, workplace, or for any commercial purpose, you must obtain a commercial license.**
+
+This includes but is not limited to:
+- Using the software at work (any organization)
+- Integrating into commercial products or services
+- Using for client work or consulting
+- Offering as part of a SaaS/cloud service
+
+**Contact**: missdeer@gmail.com for commercial licensing inquiries.
+
+See [LICENSE-COMMERCIAL](https://github.com/missdeer/codex-mcp-rs/blob/master/LICENSE-COMMERCIAL) for more details.
 
 ## Related Projects
 
