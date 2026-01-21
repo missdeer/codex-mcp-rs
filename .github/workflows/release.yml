@@ -26,18 +26,35 @@ jobs:
             artifact_name: codex-mcp-rs
             asset_name: codex-mcp-rs_Linux_x86_64.tar.gz
             universal: false
+            cross: false
+          # Linux arm64
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact_name: codex-mcp-rs
+            asset_name: codex-mcp-rs_Linux_arm64.tar.gz
+            universal: false
+            cross: true
           # macOS universal (x86_64 + aarch64)
           - target: universal-apple-darwin
             os: macos-latest
             artifact_name: codex-mcp-rs
             asset_name: codex-mcp-rs_Darwin_universal.tar.gz
             universal: true
+            cross: false
           # Windows x86_64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             artifact_name: codex-mcp-rs.exe
             asset_name: codex-mcp-rs_Windows_x86_64.zip
             universal: false
+            cross: false
+          # Windows arm64
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            artifact_name: codex-mcp-rs.exe
+            asset_name: codex-mcp-rs_Windows_arm64.zip
+            universal: false
+            cross: false
 
     steps:
       - name: Checkout
@@ -55,8 +72,21 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install cross-compilation tools (Linux arm64)
+        if: matrix.cross == true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu
+
       - name: Build
-        if: matrix.universal != true
+        if: matrix.universal != true && matrix.cross != true
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (Cross-compile Linux arm64)
+        if: matrix.cross == true
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_musl: aarch64-linux-gnu-gcc
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Build Universal Binary (macOS)
@@ -75,6 +105,10 @@ jobs:
             cd target/release
             strip ${{ matrix.artifact_name }}
             tar czf ../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+          elif [ "${{ matrix.cross }}" == "true" ]; then
+            cd target/${{ matrix.target }}/release
+            aarch64-linux-gnu-strip ${{ matrix.artifact_name }} || true
+            tar czf ../../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
           else
             cd target/${{ matrix.target }}/release
             strip ${{ matrix.artifact_name }}

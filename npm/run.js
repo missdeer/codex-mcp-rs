@@ -88,19 +88,25 @@ function getAssetName() {
       // macOS uses universal binary (supports both x64 and arm64)
       return "codex-mcp-rs_Darwin_universal.tar.gz";
     case "linux":
-      if (arch !== "x64") {
+      if (arch === "x64") {
+        return "codex-mcp-rs_Linux_x86_64.tar.gz";
+      } else if (arch === "arm64") {
+        return "codex-mcp-rs_Linux_arm64.tar.gz";
+      } else {
         throw new Error(
-          `Unsupported architecture: ${arch} on Linux. Only x64 is supported.`
+          `Unsupported architecture: ${arch} on Linux. Only x64 and arm64 are supported.`
         );
       }
-      return "codex-mcp-rs_Linux_x86_64.tar.gz";
     case "win32":
-      if (arch !== "x64") {
+      if (arch === "x64") {
+        return "codex-mcp-rs_Windows_x86_64.zip";
+      } else if (arch === "arm64") {
+        return "codex-mcp-rs_Windows_arm64.zip";
+      } else {
         throw new Error(
-          `Unsupported architecture: ${arch} on Windows. Only x64 is supported.`
+          `Unsupported architecture: ${arch} on Windows. Only x64 and arm64 are supported.`
         );
       }
-      return "codex-mcp-rs_Windows_x86_64.zip";
     default:
       throw new Error(`Unsupported platform: ${platform}`);
   }

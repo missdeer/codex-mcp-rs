@@ -17,6 +17,17 @@ A high-performance Rust implementation of MCP (Model Context Protocol) server th
 - **Sandbox Safety**: Configurable sandbox policies (read-only, workspace-write, danger-full-access)
 - **Image Support**: Attach images to prompts for visual context
 - **Async Runtime**: Built on Tokio for efficient async I/O
+- **Cross-Platform**: Pre-built binaries for Linux, macOS, and Windows (x64 and arm64)
+
+## Supported Platforms
+
+| Platform | Architecture | Binary |
+|----------|--------------|--------|
+| Linux | x86_64 | `codex-mcp-rs_Linux_x86_64.tar.gz` |
+| Linux | arm64 | `codex-mcp-rs_Linux_arm64.tar.gz` |
+| macOS | Universal (x64 + arm64) | `codex-mcp-rs_Darwin_universal.tar.gz` |
+| Windows | x86_64 | `codex-mcp-rs_Windows_x86_64.zip` |
+| Windows | arm64 | `codex-mcp-rs_Windows_arm64.zip` |
 
 ## Prerequisites
 
