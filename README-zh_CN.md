@@ -228,3 +228,7 @@ cat TESTING.md
 **联系方式**：missdeer@gmail.com 获取商业许可咨询。
 
 更多详情请参见 [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL)。
+
+## Star 历史
+
+[![Star History Chart](https://starchart.cc/missdeer/codex-mcp-rs.svg)](https://starchart.cc/missdeer/codex-mcp-rs)

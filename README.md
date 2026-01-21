@@ -228,3 +228,7 @@ This includes but is not limited to:
 **Contact**: missdeer@gmail.com for commercial licensing inquiries.
 
 See [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL) for more details.
+
+## Star History
+
+[![Star History Chart](https://starchart.cc/missdeer/codex-mcp-rs.svg)](https://starchart.cc/missdeer/codex-mcp-rs)
