@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/missdeer/codex-mcp-rs/workflows/CI/badge.svg)](https://github.com/missdeer/codex-mcp-rs/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Rust Version](https://img.shields.io/badge/rust-1.70%2B-blue.svg)](https://www.rust-lang.org)
+[![Rust Version](https://img.shields.io/badge/rust-1.77.2%2B-blue.svg)](https://www.rust-lang.org)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 
 A high-performance Rust implementation of MCP (Model Context Protocol) server that wraps the Codex CLI for AI-assisted coding tasks.
@@ -20,7 +20,7 @@ A high-performance Rust implementation of MCP (Model Context Protocol) server th
 
 ## Prerequisites
 
-- Rust 1.90+ (uses 2021 edition)
+- Rust 1.77.2+ (required for Windows command-line argument escaping fixes)
 - [Codex CLI](https://github.com/anthropics/codex) installed and configured
 - Claude Code or another MCP client
 

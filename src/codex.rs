@@ -194,7 +194,19 @@ async fn run_internal(opts: Options) -> Result<CodexResult> {
     let codex_bin = std::env::var("CODEX_BIN").unwrap_or_else(|_| "codex".to_string());
 
     // Build the base command
+    // On Windows, codex is distributed as codex.cmd which requires cmd.exe to execute.
+    // Use %ComSpec% to avoid PATH hijacking, /D to disable AutoRun, /S for proper quoting.
+    // Note: Arguments pass through cmd.exe shell parsing - this is unavoidable for .cmd files.
+    #[cfg(windows)]
+    let mut cmd = {
+        let comspec = std::env::var("ComSpec").unwrap_or_else(|_| "cmd.exe".to_string());
+        let mut c = Command::new(comspec);
+        c.args(["/D", "/S", "/C", &codex_bin]);
+        c
+    };
+    #[cfg(not(windows))]
     let mut cmd = Command::new(codex_bin);
+
     cmd.args(["exec", "--sandbox", opts.sandbox.as_str(), "--cd"]);
 
     // Use OsStr for path handling to support non-UTF-8 paths
