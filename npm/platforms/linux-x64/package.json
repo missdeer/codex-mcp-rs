@@ -1,0 +1,17 @@
+{
+  "name": "@codex-mcp-rs/linux-x64",
+  "version": "0.1.5",
+  "description": "Platform-specific binary for codex-mcp-rs (Linux x64)",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/missdeer/codex-mcp-rs.git"
+  },
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "files": ["bin/codex-mcp-rs", "LICENSE"],
+  "preferUnplugged": true,
+  "publishConfig": {
+    "access": "public"
+  }
+}

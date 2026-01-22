@@ -67,7 +67,7 @@ cargo run
 npx @missdeer/codex-mcp-rs
 ```
 
-此命令会自动下载适合您平台（Windows/macOS/Linux，x64/arm64）的预编译二进制文件并启动 MCP 服务器。无需手动安装。
+此命令会自动安装适合您平台（Windows/macOS/Linux，x64/arm64）的预编译二进制文件并启动 MCP 服务器。无需手动安装。
 
 添加到 Claude Code：
 
@@ -79,16 +79,15 @@ claude mcp add codex-rs -s user --transport stdio -- npx @missdeer/codex-mcp-rs
 
 ### 方式一：通过 npx 使用（推荐）
 
-使用 npx 是最简单的方式 - 它会自动处理二进制文件下载和更新：
+使用 npx 是最简单的方式 - 它会自动处理二进制文件安装：
 
 ```bash
 npx @missdeer/codex-mcp-rs
 ```
 
 **执行过程：**
-1. npm 检查 `@missdeer/codex-mcp-rs` 的最新版本
-2. 下载与您的操作系统和架构匹配的预编译二进制文件
-3. 在 stdio 传输上启动 MCP 服务器
+1. npm 安装特定平台的二进制包（`@codex-mcp-rs/darwin-universal`、`@codex-mcp-rs/linux-x64` 等）
+2. 在 stdio 传输上启动 MCP 服务器
 
 **添加到 Claude Code MCP 配置：**
 
@@ -103,7 +102,7 @@ npm install -g @missdeer/codex-mcp-rs
 claude mcp add codex-rs -s user --transport stdio -- codex-mcp-rs
 ```
 
-全局安装会在本地缓存二进制文件，避免每次运行时的版本检查。
+全局安装会在本地缓存二进制文件，实现即时启动。
 
 ### 方式二：通过安装脚本安装（Linux/macOS）
 

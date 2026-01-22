@@ -67,7 +67,7 @@ The fastest way to get started is using npx:
 npx @missdeer/codex-mcp-rs
 ```
 
-This command automatically downloads the correct pre-built binary for your platform (Windows/macOS/Linux, x64/arm64) and launches the MCP server. No manual installation required.
+This command automatically installs the correct pre-built binary for your platform (Windows/macOS/Linux, x64/arm64) and launches the MCP server. No manual installation required.
 
 To add it to Claude Code:
 
@@ -79,16 +79,15 @@ claude mcp add codex-rs -s user --transport stdio -- npx @missdeer/codex-mcp-rs
 
 ### Option 1: Use via npx (Recommended)
 
-Using npx is the simplest approach - it handles binary download and updates automatically:
+Using npx is the simplest approach - it handles binary installation automatically:
 
 ```bash
 npx @missdeer/codex-mcp-rs
 ```
 
 **What happens:**
-1. npm checks for the latest version of `@missdeer/codex-mcp-rs`
-2. Downloads the pre-built binary matching your OS and architecture
-3. Launches the MCP server on stdio transport
+1. npm installs the platform-specific binary package (`@codex-mcp-rs/darwin-universal`, `@codex-mcp-rs/linux-x64`, etc.)
+2. Launches the MCP server on stdio transport
 
 **Add to Claude Code MCP configuration:**
 
@@ -103,7 +102,7 @@ npm install -g @missdeer/codex-mcp-rs
 claude mcp add codex-rs -s user --transport stdio -- codex-mcp-rs
 ```
 
-Global installation caches the binary locally, eliminating the version check on each run.
+Global installation caches the binary locally for instant startup.
 
 ### Option 2: Install via Install Script (Linux/macOS)
 

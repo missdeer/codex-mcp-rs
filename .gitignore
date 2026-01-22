@@ -26,3 +26,4 @@ npm/*.zip
 # Build artifacts
 *.tar.gz
 *.zip
+.ace-tool/

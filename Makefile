@@ -54,7 +54,7 @@ check: fmt clippy test ## Run all checks (fmt, clippy, test)
 ci: check build-release ## Run all CI checks
 
 npm-pack: build-release ## Pack npm package for testing
-	cd npm && npm pack
+	cd npm/codex-mcp-rs && npm pack
 
 npm-install: npm-pack ## Install npm package locally for testing
-	npm install -g npm/missdeer-codex-mcp-rs-*.tgz
+	npm install -g npm/codex-mcp-rs/missdeer-codex-mcp-rs-*.tgz

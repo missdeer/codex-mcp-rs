@@ -1,0 +1,17 @@
+{
+  "name": "@codex-mcp-rs/darwin-universal",
+  "version": "0.1.5",
+  "description": "Platform-specific binary for codex-mcp-rs (macOS Universal)",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/missdeer/codex-mcp-rs.git"
+  },
+  "os": ["darwin"],
+  "cpu": ["x64", "arm64"],
+  "files": ["bin/codex-mcp-rs", "LICENSE"],
+  "preferUnplugged": true,
+  "publishConfig": {
+    "access": "public"
+  }
+}
