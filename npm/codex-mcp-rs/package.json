@@ -1,6 +1,6 @@
 {
   "name": "@missdeer/codex-mcp-rs",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Rust implementation of MCP server that wraps the Codex CLI",
   "publishConfig": {
     "access": "public"
@@ -42,10 +42,10 @@
     "arm64"
   ],
   "optionalDependencies": {
-    "@codex-mcp-rs/darwin-universal": "0.1.6",
-    "@codex-mcp-rs/linux-x64": "0.1.6",
-    "@codex-mcp-rs/linux-arm64": "0.1.6",
-    "@codex-mcp-rs/win32-x64": "0.1.6",
-    "@codex-mcp-rs/win32-arm64": "0.1.6"
+    "@codex-mcp-rs/darwin-universal": "0.1.7",
+    "@codex-mcp-rs/linux-x64": "0.1.7",
+    "@codex-mcp-rs/linux-arm64": "0.1.7",
+    "@codex-mcp-rs/win32-x64": "0.1.7",
+    "@codex-mcp-rs/win32-arm64": "0.1.7"
   }
 }

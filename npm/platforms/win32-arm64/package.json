@@ -1,6 +1,6 @@
 {
   "name": "@codex-mcp-rs/win32-arm64",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Platform-specific binary for codex-mcp-rs (Windows arm64)",
   "license": "GPL-3.0-only",
   "repository": {
