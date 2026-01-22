@@ -1,0 +1,51 @@
+{
+  "name": "@missdeer/codex-mcp-rs",
+  "version": "0.1.6",
+  "description": "Rust implementation of MCP server that wraps the Codex CLI",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/missdeer/codex-mcp-rs.git"
+  },
+  "author": "missdeer",
+  "license": "GPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/missdeer/codex-mcp-rs/issues"
+  },
+  "homepage": "https://github.com/missdeer/codex-mcp-rs#readme",
+  "keywords": [
+    "mcp",
+    "codex",
+    "cli",
+    "rust",
+    "model-context-protocol"
+  ],
+  "bin": {
+    "codex-mcp-rs": "run.js"
+  },
+  "files": [
+    "run.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=14.14.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "optionalDependencies": {
+    "@codex-mcp-rs/darwin-universal": "0.1.6",
+    "@codex-mcp-rs/linux-x64": "0.1.6",
+    "@codex-mcp-rs/linux-arm64": "0.1.6",
+    "@codex-mcp-rs/win32-x64": "0.1.6",
+    "@codex-mcp-rs/win32-arm64": "0.1.6"
+  }
+}

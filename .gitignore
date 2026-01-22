@@ -18,8 +18,10 @@ Thumbs.db
 # NPM
 npm/node_modules/
 npm/*.tgz
-npm/codex-mcp-rs
-npm/codex-mcp-rs.exe
+npm/platforms/*/bin/
+npm/platforms/*/LICENSE
+npm/codex-mcp-rs/codex-mcp-rs
+npm/codex-mcp-rs/codex-mcp-rs.exe
 npm/*.tar.gz
 npm/*.zip
 
