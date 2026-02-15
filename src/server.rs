@@ -109,6 +109,10 @@ pub struct CodexArgs {
     /// environment variable or falls back to 600 seconds (10 minutes). Max: 3600 seconds.
     #[serde(default)]
     pub timeout_secs: Option<u64>,
+    /// Force using stdin to pass the prompt to the codex process, bypassing the auto-detection.
+    /// Default: false. When true, the prompt is always piped via stdin regardless of content.
+    #[serde(default)]
+    pub force_stdin: bool,
 }
 
 /// Result of parsing the default timeout from environment
@@ -484,6 +488,7 @@ impl CodexServer {
             yolo: args.yolo,
             profile: args.profile,
             timeout_secs: args.timeout_secs,
+            force_stdin: args.force_stdin,
         };
 
         // Execute codex
@@ -613,6 +618,7 @@ mod tests {
             yolo: true,
             profile: None,
             timeout_secs: None,
+            force_stdin: false,
         };
         let security = SecurityConfig {
             allow_danger_full_access: false,

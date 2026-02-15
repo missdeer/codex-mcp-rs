@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 /// Default timeout in seconds (10 minutes)
@@ -53,6 +53,9 @@ pub struct Options {
     /// Timeout in seconds for the codex execution. If None, defaults to 600 seconds (10 minutes).
     /// Set to a specific value to override. The library enforces a timeout to prevent unbounded execution.
     pub timeout_secs: Option<u64>,
+    /// Force using stdin to pass the prompt to the codex process, bypassing auto-detection.
+    /// Default: false. When true, the prompt is always piped via stdin regardless of content.
+    pub force_stdin: bool,
 }
 
 #[derive(Debug)]
@@ -136,6 +139,32 @@ async fn read_line_with_limit<R: AsyncBufReadExt + Unpin>(
     })
 }
 
+/// Maximum prompt length that can safely be passed as a CLI argument
+const MAX_CLI_PROMPT_LEN: usize = 800;
+
+/// Characters that are dangerous in shell argument contexts.
+///
+/// Cross-platform rationale:
+/// - On Windows, codex is launched via `cmd.exe /D /S /C codex ...`, so all arguments
+///   pass through cmd.exe shell parsing. Chars like `%`, `^`, `!`, `&`, `|`, `<`, `>`
+///   are cmd.exe metacharacters that get interpreted/mangled.
+/// - On non-Windows, `Command::arg()` bypasses the shell, so special chars in args
+///   are safe. However, newlines and extreme length can still cause issues.
+/// - We use a single superset list for simplicity — triggering stdin mode when it's
+///   not strictly needed (on Unix) is harmless, while missing a dangerous char on
+///   Windows would be a real bug.
+const SPECIAL_CHARS: &[char] = &[
+    '\n', '\\', '"', '\'', '`', '$', // Unix/general
+    '%', '^', '!', '&', '|', '<', '>', '(', ')', // Windows cmd.exe
+];
+
+/// Determine whether the prompt should be passed via stdin rather than as a CLI argument.
+/// Returns true when the prompt exceeds MAX_CLI_PROMPT_LEN characters or contains
+/// any character in SPECIAL_CHARS.
+fn needs_stdin_mode(prompt: &str) -> bool {
+    prompt.len() > MAX_CLI_PROMPT_LEN || prompt.contains(SPECIAL_CHARS)
+}
+
 /// Execute Codex CLI with the given options and return the result
 /// Requires timeout to be set to prevent unbounded execution.
 /// If timeout_secs is None or 0, uses DEFAULT_TIMEOUT_SECS.
@@ -161,6 +190,7 @@ pub async fn run(opts: Options) -> Result<CodexResult> {
         yolo: opts.yolo,
         profile: opts.profile,
         timeout_secs: Some(timeout_secs),
+        force_stdin: opts.force_stdin,
     };
 
     // Apply timeout
@@ -242,18 +272,51 @@ async fn run_internal(opts: Options) -> Result<CodexResult> {
         cmd.args(["resume", session_id]);
     }
 
-    // Add the prompt at the end - Command::arg() handles proper escaping across platforms
-    // Note: When resuming, the prompt serves as a continuation message in the existing session
-    cmd.args(["--", &opts.prompt]);
+    // Decide whether to pass prompt via stdin or CLI arg.
+    // When the prompt is long or contains shell-dangerous characters, we use stdin
+    // to avoid cmd.exe mangling on Windows and OS arg length limits.
+    let use_stdin = opts.force_stdin || needs_stdin_mode(&opts.prompt);
+    if use_stdin {
+        cmd.args(["--", "-"]);
+        cmd.stdin(Stdio::piped());
+    } else {
+        cmd.args(["--", &opts.prompt]);
+        cmd.stdin(Stdio::null());
+    }
 
     // Configure process
-    cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
     cmd.kill_on_drop(true); // Ensure child is killed if this future is dropped (e.g., on timeout)
 
     // Spawn the process
     let mut child = cmd.spawn().context("Failed to spawn codex command")?;
+
+    // Write prompt to stdin if using stdin mode, then close stdin to signal EOF.
+    // If the child exits early (e.g., auth/config error) before consuming stdin,
+    // write_all returns BrokenPipe or NotConnected. We swallow only those so
+    // execution continues to the normal stdout/stderr/exit-status path and callers
+    // still get structured CodexResult diagnostics. Other IO errors (genuine local
+    // faults) are propagated as hard errors.
+    if use_stdin {
+        if let Some(mut stdin) = child.stdin.take() {
+            if let Err(e) = stdin.write_all(opts.prompt.as_bytes()).await {
+                match e.kind() {
+                    std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::NotConnected => {
+                        eprintln!(
+                            "Warning: codex process closed stdin early ({}); \
+                             continuing to collect exit status and stderr",
+                            e
+                        );
+                    }
+                    _ => {
+                        return Err(e).context("Failed to write prompt to codex stdin");
+                    }
+                }
+            }
+            // drop(stdin) closes the pipe, signaling EOF to the child
+        }
+    }
 
     // Read stdout
     let stdout = child.stdout.take().context("Failed to get stdout")?;
@@ -572,6 +635,7 @@ mod tests {
             yolo: false,
             profile: None,
             timeout_secs: None,
+            force_stdin: false,
         };
 
         assert_eq!(opts.prompt, "test prompt");
@@ -595,6 +659,7 @@ mod tests {
             yolo: false,
             profile: Some("default".to_string()),
             timeout_secs: Some(600),
+            force_stdin: false,
         };
 
         assert_eq!(opts.session_id, Some("test-session-123".to_string()));
@@ -753,5 +818,42 @@ mod tests {
         // Agent_messages warning should still be added since it's a separate concern
         assert!(updated.warnings.is_some());
         assert!(updated.warnings.unwrap().contains("No agent_messages"));
+    }
+
+    #[test]
+    fn test_needs_stdin_short_clean_prompt() {
+        assert!(!needs_stdin_mode("simple prompt"));
+    }
+
+    #[test]
+    fn test_needs_stdin_long_prompt() {
+        let long = "a".repeat(801);
+        assert!(needs_stdin_mode(&long));
+    }
+
+    #[test]
+    fn test_needs_stdin_exact_boundary() {
+        let exact = "a".repeat(800);
+        assert!(!needs_stdin_mode(&exact));
+    }
+
+    #[test]
+    fn test_needs_stdin_special_chars() {
+        // Unix/general
+        assert!(needs_stdin_mode("line1\nline2"));
+        assert!(needs_stdin_mode(r"path\to\file"));
+        assert!(needs_stdin_mode(r#"say "hello""#));
+        assert!(needs_stdin_mode("it's a test"));
+        assert!(needs_stdin_mode("echo `date`"));
+        assert!(needs_stdin_mode("$HOME/dir"));
+        // Windows cmd.exe metacharacters
+        assert!(needs_stdin_mode("100%done"));
+        assert!(needs_stdin_mode("a^b"));
+        assert!(needs_stdin_mode("!important"));
+        assert!(needs_stdin_mode("a&b"));
+        assert!(needs_stdin_mode("a|b"));
+        assert!(needs_stdin_mode("a<b"));
+        assert!(needs_stdin_mode("a>b"));
+        assert!(needs_stdin_mode("(group)"));
     }
 }

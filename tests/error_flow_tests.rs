@@ -109,6 +109,7 @@ fn test_path_handling_with_non_utf8() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     // Should be able to create options without panicking
@@ -159,6 +160,7 @@ fn test_server_security_restrictions() {
         yolo: true,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     // Simulate security config that disallows dangerous features
@@ -228,6 +230,7 @@ async fn test_timeout_error_shape() {
         yolo: false,
         profile: None,
         timeout_secs: Some(1), // 1 second timeout
+        force_stdin: false,
     };
 
     let result = codex::run(opts).await.expect("run should return Ok");
@@ -257,6 +260,78 @@ async fn test_timeout_error_shape() {
     assert!(
         result.warnings.is_none(),
         "timeout should not generate validation warnings"
+    );
+
+    // Clean up env var
+    env::remove_var("CODEX_BIN");
+}
+
+/// Regression test: when force_stdin is true and the child process exits before
+/// reading stdin (triggering BrokenPipe), run() must still return Ok(CodexResult)
+/// with structured error info from the exit status, instead of propagating the
+/// BrokenPipe as an Err.
+#[tokio::test]
+async fn test_force_stdin_early_exit_returns_structured_result() {
+    use codex_mcp_rs::codex;
+    use std::env;
+    use tempfile::tempdir;
+
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_path = temp_dir.path().to_path_buf();
+
+    // Create a script that exits immediately with code 1 without reading stdin
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        let script_path = temp_path.join("early_exit.sh");
+        fs::write(&script_path, "#!/bin/sh\nexit 1\n").expect("Failed to write script");
+        let mut perms = fs::metadata(&script_path)
+            .expect("Failed to get metadata")
+            .permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).expect("Failed to set permissions");
+
+        env::set_var("CODEX_BIN", script_path.to_str().unwrap());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::fs;
+        let script_path = temp_path.join("early_exit.bat");
+        fs::write(&script_path, "@echo off\r\nexit /b 1\r\n").expect("Failed to write script");
+        env::set_var("CODEX_BIN", script_path.to_str().unwrap());
+    }
+
+    let opts = Options {
+        prompt: "this prompt goes via stdin and will not be read".to_string(),
+        working_dir: temp_path.clone(),
+        sandbox: SandboxPolicy::ReadOnly,
+        session_id: None,
+        skip_git_repo_check: true,
+        return_all_messages: false,
+        return_all_messages_limit: None,
+        image_paths: vec![],
+        model: None,
+        yolo: false,
+        profile: None,
+        timeout_secs: Some(5),
+        force_stdin: true,
+    };
+
+    // Must return Ok(CodexResult), NOT Err(BrokenPipe)
+    let result = codex::run(opts)
+        .await
+        .expect("run() should return Ok even when child exits before reading stdin");
+
+    assert!(
+        !result.success,
+        "early-exit child should mark result as unsuccessful"
+    );
+    assert!(
+        result.error.is_some(),
+        "should have a structured error message from exit status"
     );
 
     // Clean up env var

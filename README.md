@@ -15,6 +15,7 @@ A high-performance Rust implementation of MCP (Model Context Protocol) server th
 - **Codex Integration**: Wraps the Codex CLI to enable AI-assisted coding through MCP
 - **Session Management**: Supports multi-turn conversations via session IDs
 - **Sandbox Safety**: Configurable sandbox policies (read-only, workspace-write, danger-full-access)
+- **Smart Stdin Mode**: Automatically pipes prompts via stdin when they contain special characters or exceed length limits, with `force_stdin` override
 - **Image Support**: Attach images to prompts for visual context
 - **Async Runtime**: Built on Tokio for efficient async I/O
 - **Cross-Platform**: Pre-built binaries for Linux, macOS, and Windows (x64 and arm64)
@@ -154,6 +155,8 @@ The server provides a single `codex` tool with the following parameters:
 - `model` (string): Override the Codex model
 - `yolo` (bool): Disable all prompts and sandboxing
 - `profile` (string): Load config profile from `~/.codex/config.toml`
+- `timeout_secs` (number): Timeout in seconds for codex execution (default: 600, max: 3600)
+- `force_stdin` (bool): Force passing prompt via stdin instead of CLI argument (default: `false`). When enabled, the prompt is always piped through stdin regardless of content. This is also triggered automatically when the prompt exceeds 800 characters or contains shell-special characters.
 
 ## Testing
 

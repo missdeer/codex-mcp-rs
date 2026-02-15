@@ -17,6 +17,7 @@ fn test_options_validation() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     assert!(!opts.prompt.is_empty());
@@ -45,6 +46,7 @@ fn test_sandbox_policies() {
             yolo: false,
             profile: None,
             timeout_secs: None,
+            force_stdin: false,
         };
 
         assert_eq!(opts.sandbox, policy);
@@ -79,6 +81,7 @@ fn test_image_paths() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     assert_eq!(opts.image_paths.len(), 2);
@@ -103,6 +106,7 @@ fn test_session_id_format() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     assert!(opts.session_id.is_some());
@@ -131,6 +135,7 @@ fn test_model_options() {
             yolo: false,
             profile: None,
             timeout_secs: None,
+            force_stdin: false,
         };
 
         assert_eq!(opts.model, Some(model.to_string()));
@@ -152,6 +157,7 @@ fn test_return_all_messages_flag() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     let opts_simple = Options {
@@ -167,6 +173,7 @@ fn test_return_all_messages_flag() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     assert!(opts_detailed.return_all_messages);
@@ -200,6 +207,7 @@ fn test_working_directory_paths() {
             yolo: false,
             profile: None,
             timeout_secs: None,
+            force_stdin: false,
         };
 
         assert_eq!(opts.working_dir, PathBuf::from(path));
@@ -224,6 +232,7 @@ fn test_profile_configuration() {
             yolo: false,
             profile: Some(profile.to_string()),
             timeout_secs: None,
+            force_stdin: false,
         };
 
         assert_eq!(opts.profile, Some(profile.to_string()));
@@ -245,6 +254,7 @@ fn test_yolo_mode() {
         yolo: false,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     let opts_yolo = Options {
@@ -260,6 +270,7 @@ fn test_yolo_mode() {
         yolo: true,
         profile: None,
         timeout_secs: None,
+        force_stdin: false,
     };
 
     assert!(!opts_safe.yolo);

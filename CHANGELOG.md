@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Smart stdin mode: prompts are automatically piped via stdin when they exceed 800 characters or contain shell-special characters (cross-platform: covers both Unix and Windows cmd.exe metacharacters)
+- `force_stdin` tool parameter to force stdin mode regardless of prompt content
+- `timeout_secs` tool parameter for configuring codex execution timeout
+- Regression test for stdin early-exit handling (`test_force_stdin_early_exit_returns_structured_result`)
 - Comprehensive test suite (25 tests total)
   - 10 unit tests for prompt escaping and Options validation
   - 10 integration tests for end-to-end scenarios
